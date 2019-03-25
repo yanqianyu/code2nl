@@ -42,7 +42,7 @@ class mainSessRunning():
     def inference(self, text):
         # text -> sbt -> num -> src
         ast = get_ast.get_ast(text)
-        sbt, _ = get_sbt.get_sbt(ast)
+        sbt, text = get_sbt.get_sbt(ast)
         cf = ModelConfig()
 
         params = utils.load_vocab(cf.vocab_path)
@@ -51,11 +51,21 @@ class mainSessRunning():
         src = [ids] * cf.batch_size
         src_len = [len(ids)] * cf.batch_size
 
+        texts = [i for i in utils.words2ids(utils.parse_input(text), params['vocab_to_int_z'])]
+        texts = [texts] * cf.batch_size
+        texts_len = [len(texts)] * cf.batch_size
+
         self.request.inputs["input_sentence"].CopyFrom(
             tf.contrib.util.make_tensor_proto(src, dtype=tf.int32)
         )
         self.request.inputs["input_sentence_length"].CopyFrom(
             tf.contrib.util.make_tensor_proto(src_len, dtype=tf.int32)
+        )
+        self.request.inputs["input_text"].CopyFrom(
+            tf.contrib.util.make_tensor_proto(texts, dtype=tf.int32)
+        )
+        self.request.inputs["input_text_length"].CopyFrom(
+            tf.contrib.util.make_tensor_proto(texts_len, dtype=tf.int32)
         )
 
         self.request.inputs["input_keep_prob"].CopyFrom(
@@ -87,7 +97,7 @@ class mainSessRunning():
 
         att_mat = attention_matrix[0: len(res_hyps.split()), :]
 
-        return res_hyps, att_mat, str((b-a).seconds), sbt
+        return res_hyps, att_mat, str((b-a).seconds), sbt + ' ' + text
 
 
 run = mainSessRunning()

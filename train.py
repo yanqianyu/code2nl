@@ -165,10 +165,19 @@ def infer(model_config):
             text = [texts] * model_config.batch_size
             text_len = [len(texts)] * model_config.batch_size
             res, att = model.predict(sess, input, length, text, text_len)
+
             res = res[0]
             res = " ".join([params['int_to_vocab_y'][str(i)] for i in res if i not in (pad_code, stop_code)])
+
             cands[i] = [res]
             gts[i] = [test_y[i]]
+
+            att = att[0:len(res.split(' ')), 0, :]
+            att_ids = " ".join([params['int_to_vocab_x'][str(i)] for i in ids if i != stop_code])
+            att_texts = " ".join([params['int_to_vocab_z'][str(i)] for i in texts if i != stop_code])
+            heatmap_name = os.path.join(model_config.picture_path + "/attention_matrix-" + str(i) + ".png")
+            utils.plot_attention_matrix(src=att_ids + " " + att_texts, trg=res, matrix=att, name=heatmap_name)
+
             print(res)
 
         score_Bleu, scores_Bleu = Bleu(4).compute_score(gts, cands)
